@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dov'è - Archivio Domestico</title>
+
+    <!-- !!! INIZIO AGGIUNTE PWA !!! -->
+    <!-- Colore della barra del browser sui dispositivi mobili -->
+    <meta name="theme-color" content="#3b82f6">
+    <!-- Link al file Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Icona per i dispositivi Apple -->
+    <link rel="apple-touch-icon" href="https_placehold.co/192x192/3b82f6/FFFFFF?text=D">
+    <!-- !!! FINE AGGIUNTE PWA !!! -->
+
     <!-- Carico Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Carico le icone di Phosphor Icons -->
@@ -330,6 +340,22 @@
 
         navCerca.addEventListener('click', () => switchTab('cerca'));
         navPremium.addEventListener('click', () => switchTab('premium'));
+
+        // --- !!! INIZIO AGGIUNTA PWA: REGISTRAZIONE SERVICE WORKER !!! ---
+        // Questo codice controlla se il browser supporta i service worker
+        // e, in caso affermativo, registra il nostro file service-worker.js
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registrato con successo:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Registrazione Service Worker fallita:', error);
+                    });
+            });
+        }
+        // --- !!! FINE AGGIUNTA PWA !!! ---
 
     </script>
 

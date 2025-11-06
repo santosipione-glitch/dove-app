@@ -1,0 +1,21 @@
+{
+  "name": "Dov'è - Archivio Domestico",
+  "short_name": "Dov'è",
+  "description": "Il tuo motore di ricerca domestico per ridurre il carico mentale.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "https_placehold.co/192x192/3b82f6/FFFFFF?text=D",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https_placehold.co/512x512/3b82f6/FFFFFF?text=Dov'è",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
