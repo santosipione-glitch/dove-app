@@ -3,30 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dov'è - Prototipo Online V2</title>
+    <title>Dov'è - Prototipo V3 (Database)</title>
 
-    <!-- !!! INIZIO AGGIUNTE PWA !!! -->
-    <!-- Colore della barra del browser sui dispositivi mobili -->
+    <!-- PWA Stuff -->
     <meta name="theme-color" content="#3b82f6">
-    <!-- Link al file Manifest -->
     <link rel="manifest" href="manifest.json">
-    <!-- Icona per i dispositivi Apple -->
-    <link rel="apple-touch-icon" href="https_placehold.co/192x192/3b82f6/FFFFFF?text=D">
-    <!-- !!! FINE AGGIUNTE PWA !!! -->
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/3b82f6/FFFFFF?text=D">
 
-    <!-- Carico Tailwind CSS -->
+    <!-- Tailwind & Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Carico le icone di Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- !!! INIZIO MODIFICA: Supabase SDK !!! -->
+    <!-- Carica il client JavaScript di Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- !!! FINE MODIFICA !!! -->
+
     <style>
-        /* Stile per il font Inter e un fallback */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f4f7f6; /* Un grigio molto chiaro per lo sfondo */
+            background-color: #f4f7f6; 
         }
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
-        /* Piccola animazione di fade-in per i risultati */
         .risultato-item {
             animation: fadeIn 0.3s ease-in-out;
         }
@@ -35,7 +34,15 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Stile per la barra di navigazione fissa in basso */
+        /* Stile Titolo Dinamico */
+        .title-pulse {
+            animation: title-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes title-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -44,120 +51,119 @@
             z-index: 1000;
             border-top: 1px solid #e5e7eb;
             background-color: white;
-            padding-bottom: env(safe-area-inset-bottom, 0); /* Supporto per iPhone X */
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+
+        /* Stile per il Floating Action Button (FAB) */
+        .fab {
+            position: fixed;
+            bottom: 80px; /* Sopra la nav bar */
+            right: 20px;
+            z-index: 1001; /* Sopra la nav bar */
         }
     </style>
 </head>
 <body class="antialiased">
 
-    <!-- Contenitore principale con padding per la bottom-nav -->
-    <div id="app" class="pb-24">
+    <!-- 
+      Schermata di Login
+      Visibile di default, nascosta quando l'utente è loggato.
+    -->
+    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-blue-600">
+                Dov<span class="text-amber-500 title-pulse">'è</span>
+            </h1>
+            <p class="text-gray-500 text-lg mt-2">Accedi al tuo archivio domestico.</p>
+        </div>
         
-        <!-- Schermata Cerca (Default) -->
-        <div id="tab-cerca">
-            <!-- Header -->
-            <header class="bg-white shadow-sm p-4 sticky top-0 z-10">
-                <div class="max-w-md mx-auto">
-                    <h1 class="text-2xl font-bold text-center text-blue-600">Dov'è</h1>
-                    <p class="text-center text-gray-500 text-sm">Il tuo motore di ricerca domestico.</p>
-                </div>
-            </header>
-
-            <!-- Contenuto principale -->
-            <main class="max-w-md mx-auto p-4">
-                
-                <!-- Barra di Ricerca -->
-                <div class="relative mb-6">
-                    <input type="text" id="search-input" placeholder="Cerca passaporto, batterie, natale..." class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <i class="ph ph-magnifying-glass absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                </div>
-
-                <!-- Risultati della Ricerca -->
-                <div id="search-results" class="space-y-4">
-                    <!-- I risultati verranno iniettati qui dal JS -->
-                </div>
-
-                <!-- Messaggio di default o nessun risultato -->
-                <div id="default-message" class="text-center text-gray-400 mt-10">
-                    <i class="ph ph-sparkle text-4xl"></i>
-                    <p class="mt-2">Inizia a cercare per trovare i tuoi oggetti.</p>
-                </div>
-
-            </main>
+        <div id="loading-message" class="text-center text-gray-500 mb-4">
+            <p>Connessione in corso...</p>
         </div>
 
-        <!-- Schermata Premium -->
-        <div id="tab-premium" class="hidden">
-            <!-- Header -->
-            <header class="bg-white shadow-sm p-4 sticky top-0 z-10">
-                <div class="max-w-md mx-auto">
-                    <h1 class="text-2xl font-bold text-center text-blue-600">Dov'è Premium</h1>
-                    <p class="text-center text-gray-500 text-sm">Sblocca funzioni potentissime.</p>
-                </div>
-            </header>
-
-            <!-- Contenuto Premium -->
-            <main class="max-w-md mx-auto p-4">
-                <div class="bg-white rounded-lg shadow-xl overflow-hidden">
-                    <div class="p-6">
-                        <div class="text-center">
-                            <i class="ph ph-rocket-launch text-6xl text-blue-500"></i>
-                            <h2 class="text-3xl font-bold text-gray-800 mt-4">Passa a Premium</h2>
-                            <p class="text-gray-600 mt-2">Ottieni il massimo dal tuo archivio domestico per soli **1,99€ / mese**.</p>
-                        </div>
-                        
-                        <ul class="space-y-4 mt-8 text-gray-700">
-                            <li class="flex items-center">
-                                <i class="ph ph-users text-blue-500 text-xl mr-3"></i>
-                                <span>Condivisione Familiare (in arrivo)</span>
-                            </li>
-                            <li class="flex items-center">
-                                <i class="ph ph-cloud-arrow-up text-blue-500 text-xl mr-3"></i>
-                                <span>Backup e Ripristino nel Cloud</span>
-                            </li>
-                            <li class="flex items-center">
-                                <i class="ph ph-sparkle text-blue-500 text-xl mr-3"></i>
-                                <span>Tagging Automatico con AI (in arrivo)</span>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <!-- Funzione Killer: Assicurazione -->
-                    <div class="bg-blue-50 p-6 border-t border-blue-200">
-                        <div class="flex items-center">
-                            <i class="ph ph-house-line text-4xl text-blue-600 mr-4"></i>
-                            <div>
-                                <h3 class="text-lg font-semibold text-blue-800">Servizio Assicurativo</h3>
-                                <p class="text-blue-700 text-sm">In caso di furto o incendio, esporta l'inventario completo con foto come PDF ufficiale per la tua assicurazione.</p>
-                            </div>
-                        </div>
-                        <button class="w-full mt-4 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition-colors">
-                            Diventa Premium
-                        </button>
-                    </div>
-                </div>
-            </main>
+        <div id="auth-buttons" class="w-full max-w-xs space-y-3 hidden">
+            <button id="google-login-button" class="w-full bg-white text-gray-700 font-semibold py-3 px-4 rounded-lg shadow-md border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                <img src="https://placehold.co/24x24/ffffff/000000?text=G" alt="Google Logo" class="mr-3"><!-- Sostituire con vera icona Google -->
+                Accedi con Google
+            </button>
+            <!-- Aggiungi altri bottoni (Email, Apple, etc.) qui se vuoi -->
         </div>
-
     </div>
 
-    <!-- Barra di Navigazione Inferiore -->
-    <nav class="bottom-nav flex justify-around max-w-md mx-auto">
-        <button id="nav-cerca" class="flex-1 text-center py-3 text-blue-600 border-t-2 border-blue-600">
-            <i class="ph ph-magnifying-glass text-2xl"></i>
-            <span class="text-xs block">Cerca</span>
+    <!-- 
+      Contenitore Principale dell'App
+      Nascosto di default, visibile solo dopo il login.
+    -->
+    <div id="app-container" class="hidden">
+        
+        <!-- Contenitore app con padding per la bottom-nav -->
+        <div id="app" class="pb-24">
+            
+            <!-- Schermata Cerca (Default) -->
+            <div id="tab-cerca">
+                <!-- Header -->
+                <header class="bg-white shadow-sm p-4 sticky top-0 z-10">
+                    <div class="max-w-md mx-auto flex justify-between items-center">
+                        <h1 class="text-2xl font-bold text-blue-600">
+                            Dov<span class="text-amber-500 title-pulse">'è</span>
+                        </h1>
+                        <button id="sign-out-button" class="text-sm text-gray-500 hover:text-blue-600">
+                            Esci
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Contenuto principale -->
+                <main class="max-w-md mx-auto p-4">
+                    
+                    <!-- Barra di Ricerca -->
+                    <div class="relative mb-6">
+                        <input type="text" id="search-input" placeholder="Cerca passaporto, batterie..." class="w-full px-5 py-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <i class="ph ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+
+                    <!-- Risultati della Ricerca -->
+                    <div id="search-results" class="space-y-4">
+                        <!-- I risultati verranno iniettati qui dal JS -->
+                    </div>
+
+                    <!-- Messaggio di default o nessun risultato -->
+                    <div id="default-message" class="text-center text-gray-400 mt-10 p-4 rounded-lg bg-gray-50">
+                        <!-- Questo verrà aggiornato dinamicamente dal JS -->
+                    </div>
+                </main>
+            </div>
+
+            <!-- Schermata Premium (Nascosta per ora) -->
+            <div id="tab-premium" class="hidden">
+                 <!-- Contenuto Premium -->
+            </div>
+
+        </div>
+
+        <!-- Pulsante "+" Aggiungi Oggetto (FAB) -->
+        <button id="open-add-modal-button" class="fab bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-transform transform hover:scale-110">
+            <i class="ph ph-plus text-3xl"></i>
         </button>
-        <button id="nav-premium" class="flex-1 text-center py-3 text-gray-500">
-            <i class="ph ph-rocket-launch text-2xl"></i>
-            <span class="text-xs block">Premium</span>
-        </button>
-    </nav>
+
+        <!-- Barra di Navigazione Inferiore -->
+        <nav class="bottom-nav flex justify-around max-w-md mx-auto">
+            <button id="nav-cerca" class="flex-1 text-center py-3 text-blue-600 border-t-2 border-blue-600">
+                <i class="ph ph-magnifying-glass text-2xl"></i>
+                <span class="text-xs block">Cerca</span>
+            </button>
+            <button id="nav-premium" class="flex-1 text-center py-3 text-gray-500">
+                <i class="ph ph-rocket-launch text-2xl"></i>
+                <span class="text-xs block">Premium</span>
+            </button>
+        </nav>
+    </div>
 
 
-    <!-- Modale (popup) per i dettagli dell'oggetto -->
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-20 hidden">
-        <div class="bg-white rounded-lg shadow-2xl max-w-sm w-full">
-            <img id="modal-img" src="" alt="Foto del luogo" class="w-full h-48 object-cover rounded-t-lg">
+    <!-- Modale (popup) per i DETTAGLI dell'oggetto -->
+    <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1050] hidden">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full">
+            <img id="modal-img" src="" alt="Foto del luogo" class="w-full h-48 object-cover rounded-t-xl">
             <div class="p-5">
                 <h2 id="modal-title" class="text-2xl font-bold mb-2"></h2>
                 <p class="text-gray-600 mb-4">Si trova in:</p>
@@ -169,193 +175,390 @@
                     <em id="modal-notes" class="text-gray-800"></em>
                 </div>
             </div>
-            <div class="p-4 bg-gray-50 rounded-b-lg">
-                <button id="close-modal" class="w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
+            <div class="p-4 bg-gray-50 rounded-b-xl">
+                <button id="close-detail-modal" class="w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
                     Chiudi
                 </button>
             </div>
         </div>
     </div>
+    
+    <!-- Modale (popup) per AGGIUNGERE un oggetto -->
+    <div id="add-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1050] hidden">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full">
+            <form id="add-form">
+                <div class="p-5">
+                    <h2 class="text-2xl font-bold mb-4">Aggiungi un Oggetto</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="add-nome" class="block text-sm font-medium text-gray-700">Nome Oggetto</label>
+                            <input type="text" id="add-nome" name="nome" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="add-posizione" class="block text-sm font-medium text-gray-700">Posizione (es. Cassetto alto)</label>
+                            <input type="text" id="add-posizione" name="posizione" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="add-tags" class="block text-sm font-medium text-gray-700">Tag (separati da virgola)</label>
+                            <input type="text" id="add-tags" name="tags" placeholder="es. cavi, hdmi, caricatore" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="add-note" class="block text-sm font-medium text-gray-700">Note</label>
+                            <textarea id="add-note" name="note" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                        <div>
+                            <label for="add-foto" class="block text-sm font-medium text-gray-700">URL Foto (opzionale)</label>
+                            <input type="url" id="add-foto" name="foto" placeholder="https://..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-50 rounded-b-xl flex space-x-3">
+                    <button type="button" id="close-add-modal-button" classs="w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors flex-1">
+                        Annulla
+                    </button>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition-colors flex-1">
+                        Salva Oggetto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 
-    <script>
-        // --- Sample Database ---
-        // This is our fake "database". It holds all the locations and items.
-        const luoghi = [
-            {
-                id: 1,
-                foto: "https://placehold.co/600x400/e2e8f0/64748b?text=Foto+Cassetto+Studio",
-                nome: "Cassetto alto scrivania",
-                posizione: "Studio > Scrivania",
-                tags: ["passaporto", "documenti", "chiavette usb", "penne"],
-                note: "Ci sono anche le chiavi di scorta della cantina."
-            },
-            {
-                id: 2,
-                foto: "https://placehold.co/600x400/d1d5db/4b5563?text=Foto+Scatola+Batterie",
-                nome: "Scatola batterie",
-                posizione: "Ripostiglio > Scaffale Sinistro",
-                tags: ["batterie", "pile", "aa", "aaa", "caricabatterie"],
-                note: "Controllare scorte batterie AAA."
-            },
-            {
-                id: 3,
-                foto: "https://placehold.co/600x400/9ca3af/f3f4f6?text=Foto+Scatolone+Natale",
-                nome: "Scatolone decorazioni",
-                posizione: "Cantina > Scaffale Destro",
-                tags: ["natale", "lucine", "palline", "decorazioni"],
-                note: "Le lucine blu sono rotte, da ricomprare."
-            },
-            {
-                id: 4,
-                foto: "https://placehold.co/600x400/cbd5e1/334155?text=Foto+Armadietto+Cavi",
-                nome: "Armadietto TV",
-                posizione: "Salotto > Mobile TV",
-                tags: ["cavi", "hdmi", "telecomandi", "prolunga"],
-                note: "C'è il cavo HDMI da 5 metri."
-            }
-        ];
+    <!-- 
+      INIZIO SCRIPT PRINCIPALE
+    -->
+    <script type="module">
+        // --- 1. CONFIGURAZIONE SUPABASE ---
+        // !!! INCOLLA QUI LE TUE CHIAVI SUPABASE !!!
+        // Le trovi nel tuo progetto Supabase > Settings > API
+        
+        const SUPABASE_URL = "INCOLLA_IL_TUO_URL_QUI"; // es. "https://xxxxxx.supabase.co"
+        const SUPABASE_ANON_KEY = "INCOLLA_LA_TUA_CHIAVE_ANON_QUI"; // es. "eyJhbGciOi..."
+        
+        // -------------------------------------------
 
-        // --- DOM Elements ---
-        // Get all the page elements we need to interact with
+        // Importa il client
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- 2. GESTIONE STATO E VARIABILI GLOBALI ---
+        let currentUserId = null; // ID dell'utente loggato
+        let luoghiStore = []; // Store locale per i dati live
+        const REALTIME_CHANNEL = 'luoghi_channel'; // Canale per gli aggiornamenti
+        let channel = null; // Variabile per il canale realtime
+
+        // --- 3. ELEMENTI DOM ---
+        const loginScreen = document.getElementById('login-screen');
+        const appContainer = document.getElementById('app-container');
+        const loadingMessage = document.getElementById('loading-message');
+        const authButtons = document.getElementById('auth-buttons');
+        const googleLoginButton = document.getElementById('google-login-button');
+        const signOutButton = document.getElementById('sign-out-button');
         const searchInput = document.getElementById('search-input');
         const searchResults = document.getElementById('search-results');
         const defaultMessage = document.getElementById('default-message');
         
-        const modal = document.getElementById('modal');
-        const closeModal = document.getElementById('close-modal');
+        // Modale Dettagli
+        const detailModal = document.getElementById('detail-modal');
+        const closeDetailModal = document.getElementById('close-detail-modal');
         const modalImg = document.getElementById('modal-img');
         const modalTitle = document.getElementById('modal-title');
         const modalLocation = document.getElementById('modal-location');
         const modalNotes = document.getElementById('modal-notes');
 
-        const navCerca = document.getElementById('nav-cerca');
-        const navPremium = document.getElementById('nav-premium');
-        const tabCerca = document.getElementById('tab-cerca');
-        const tabPremium = document.getElementById('tab-premium');
+        // Modale Aggiungi
+        const addModal = document.getElementById('add-modal');
+        const openAddModalButton = document.getElementById('open-add-modal-button');
+        const closeAddModalButton = document.getElementById('close-add-modal-button');
+        const addForm = document.getElementById('add-form');
 
-        // --- Search Logic ---
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase().trim();
+        // --- 4. LOGICA DI AUTENTICAZIONE ---
+
+        // Ascolta i cambiamenti dello stato di autenticazione
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (session && session.user) {
+                // Utente è loggato
+                currentUserId = session.user.id;
+                console.log("Utente loggato:", currentUserId);
+                
+                // Mostra l'app e nascondi il login
+                appContainer.classList.remove('hidden');
+                loginScreen.classList.add('hidden');
+                
+                // Carica i dati iniziali e imposta l'ascoltatore
+                loadInitialData();
+                setupRealtimeListener();
+
+            } else {
+                // Utente non è loggato
+                currentUserId = null;
+                console.log("Utente non loggato.");
+
+                // Mostra il login e nascondi l'app
+                loginScreen.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                loadingMessage.classList.add('hidden'); // Nascondi il caricamento
+                authButtons.classList.remove('hidden'); // Mostra i pulsanti di login
+                
+                // Smetti di ascoltare i vecchi dati
+                if (channel) {
+                    supabaseClient.removeChannel(channel);
+                    channel = null;
+                }
+                luoghiStore = []; // Svuota lo store
+                renderLuoghi(luoghiStore); // Pulisci la UI
+            }
+        });
+
+        // Funzione per il Sign-In con Google
+        const signInWithGoogle = async () => {
+            const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+            });
+            if (error) {
+                console.error("Errore Login Google:", error);
+            }
+        };
+
+        // Funzione per il Sign-Out
+        const signOutUser = async () => {
+            const { error } = await supabaseClient.auth.signOut();
+            if (error) {
+                console.error("Errore Logout:", error);
+            }
+        };
+
+        // Collega gli eventi ai pulsanti
+        googleLoginButton.addEventListener('click', signInWithGoogle);
+        signOutButton.addEventListener('click', signOutUser);
+
+        // --- 5. LOGICA DATABASE (SUPABASE) ---
+
+        // Carica i dati iniziali al login
+        async function loadInitialData() {
+            if (!currentUserId) return;
             
-            // Clear previous results
-            searchResults.innerHTML = '';
+            console.log("Caricamento dati iniziali...");
+            const { data, error } = await supabaseClient
+                .from('luoghi') // NOME DELLA TUA TABELLA
+                .select('*')    // Seleziona tutto
+                .eq('user_id', currentUserId); // Solo i dati dell'utente (se RLS è attiva, questa è una sicurezza in più)
+
+            if (error) {
+                console.error("Errore nel caricare i dati:", error.message);
+                if (error.message.includes("policy")) {
+                    defaultMessage.innerHTML = `<p class="text-red-500">Errore: La sicurezza (RLS) non è configurata correttamente su Supabase. Controlla il Passo 4 della guida.</p>`;
+                }
+            } else {
+                // Ordina in memoria
+                luoghiStore = data.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+                console.log("Dati caricati:", luoghiStore);
+                renderLuoghi(luoghiStore);
+                handleSearch(); // Applica la ricerca (se c'è)
+            }
+        }
+
+        // Imposta l'ascoltatore in tempo reale (Realtime)
+        function setupRealtimeListener() {
+            if (channel) { // Se esiste già un canale, rimuovilo
+                 supabaseClient.removeChannel(channel);
+            }
+            console.log("Imposto ascoltatore realtime...");
+            
+            channel = supabaseClient.channel(REALTIME_CHANNEL)
+                .on('postgres_changes', 
+                    { 
+                        event: '*', // Ascolta tutti gli eventi (INSERT, UPDATE, DELETE)
+                        schema: 'public', 
+                        table: 'luoghi' // NOME DELLA TUA TABELLA
+                        //, filter: `user_id=eq.${currentUserId}` // Filtro per ricevere solo i *propri* aggiornamenti
+                    }, 
+                    (payload) => {
+                        console.log('Modifica realtime ricevuta!', payload);
+                        // Un modo semplice per ricaricare i dati quando qualcosa cambia
+                        loadInitialData(); 
+                    }
+                )
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        console.log('Connesso al canale realtime!');
+                    }
+                });
+        }
+
+        // Aggiunge un nuovo oggetto al database
+        async function addItemToDb(event) {
+            event.preventDefault(); 
+            if (!currentUserId) {
+                console.error("Nessun utente loggato, impossibile aggiungere.");
+                return;
+            }
+
+            // Prendi i dati dal form
+            const nome = document.getElementById('add-nome').value;
+            const posizione = document.getElementById('add-posizione').value;
+            const tags = document.getElementById('add-tags').value;
+            const note = document.getElementById('add-note').value;
+            const foto = document.getElementById('add-foto').value || `https://placehold.co/600x400/e0f2fe/0c4a6e?text=${nome || 'Foto'}`;
+
+            // Prepara l'oggetto (assicurati che user_id sia incluso!)
+            const nuovoLuogo = {
+                nome: nome,
+                posizione: posizione,
+                tags: tags.split(',').map(tag => tag.trim().toLowerCase()),
+                note: note,
+                foto: foto,
+                user_id: currentUserId // !!! FONDAMENTALE PER LA SICUREZZA RLS !!!
+            };
+
+            // Inserisci i dati nella tabella 'luoghi'
+            const { data, error } = await supabaseClient
+                .from('luoghi') // NOME DELLA TUA TABELLA
+                .insert(nuovoLuogo); 
+
+            if (error) {
+                console.error("Errore nell'aggiungere il documento:", error);
+            } else {
+                console.log("Documento aggiunto:", data);
+                // Non serve aggiornare 'luoghiStore' manualmente,
+                // il listener realtime (setupRealtimeListener) lo farà per noi!
+                
+                // Chiudi la modale e resetta il form
+                addForm.reset();
+                addModal.classList.add('hidden');
+            }
+        }
+        
+        // Collega il submit del form
+        addForm.addEventListener('submit', addItemToDb);
+
+        // --- 6. LOGICA DI RENDERING E RICERCA ---
+
+        // Renderizza i dati nella UI
+        function renderLuoghi(luoghi) {
+            searchResults.innerHTML = ''; // Pulisci i risultati
+            
+            if (luoghi.length === 0) {
+                defaultMessage.style.display = 'block';
+                defaultMessage.innerHTML = `
+                    <i class="ph ph-sparkle text-5xl opacity-50"></i>
+                    <p class="mt-2">Il tuo archivio è vuoto. Clicca il <b>+</b> per aggiungere un oggetto!</p>
+                `;
+            } else {
+                defaultMessage.style.display = 'none';
+                luoghi.forEach(luogo => {
+                    const card = document.createElement('div');
+                    card.className = 'risultato-item bg-white p-4 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg cursor-pointer';
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-4">
+                            <img src="${luogo.foto || 'https://placehold.co/80x80/e2e8f0/64748b?text=Foto'}" alt="${luogo.nome}" class="w-20 h-20 rounded-lg object-cover flex-shrink-0">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-gray-800">${luogo.nome || 'Senza nome'}</h3>
+                                <div class="flex items-center text-sm text-gray-500 mt-1">
+                                    <i class="ph ph-map-pin-line mr-1"></i>
+                                    <span>${luogo.posizione || 'Nessuna posizione'}</span>
+                                </div>
+                            </div>
+                            <i class="ph ph-caret-right text-gray-400 text-xl"></i>
+                        </div>
+                    `;
+                    card.addEventListener('click', () => openDetailModal(luogo));
+                    searchResults.appendChild(card);
+                });
+            }
+        }
+        
+        // Funzione di ricerca
+        function handleSearch() {
+            const query = searchInput.value.toLowerCase().trim();
             
             if (query.length < 2) {
-                defaultMessage.style.display = 'block'; // Show default message
-                return; // Don't search if query is too short
+                renderLuoghi(luoghiStore); // Mostra tutto
+                return;
             }
-
-            defaultMessage.style.display = 'none'; // Hide default message
             
-            let foundCount = 0;
-            
-            luoghi.forEach(luogo => {
-                // Search in tags, name, and notes
-                const searchIn = [luogo.nome, ...luogo.tags, luogo.note].join(' ').toLowerCase();
+            const risultatiFiltrati = luoghiStore.filter(luogo => {
+                const searchIn = [
+                    luogo.nome || '',
+                    luogo.posizione || '',
+                    luogo.note || '',
+                    ...(luogo.tags || [])
+                ].join(' ').toLowerCase();
                 
-                if (searchIn.includes(query)) {
-                    foundCount++;
-                    
-                    // Check if we need to show the affiliate offer
-                    const isRotto = luogo.note.toLowerCase().includes('rotto');
-                    const isLucine = luogo.tags.includes('lucine');
-                    const offertaHTML = (isRotto && isLucine) ? `
-                        <div class="mt-3 p-3 bg-blue-100 border border-blue-200 rounded-lg">
-                            <p class="text-sm text-blue-800"><i class="ph ph-lightbulb"></i> Abbiamo notato che le lucine sono rotte!</p>
-                            <a href="#" class="text-sm font-semibold text-blue-600 hover:underline">Trova offerte per nuove lucine <i class="ph ph-arrow-right"></i></a>
-                        </div>
-                    ` : '';
-
-                    // Create the result card
-                    const card = document.createElement('div');
-                    card.className = 'risultato-item bg-white p-4 rounded-lg shadow transition-transform transform hover:scale-[1.02] cursor-pointer';
-                    card.innerHTML = `
-                        <div class="flex items-center">
-                            <img src="${luogo.foto}" alt="${luogo.nome}" class="w-16 h-16 rounded-lg object-cover mr-4">
-                            <div>
-                                <h3 class="text-lg font-semibold text-gray-800">${luogo.nome}</h3>
-                                <p class="text-sm text-gray-500">${luogo.posizione}</p>
-                            </div>
-                        </div>
-                        ${offertaHTML}
-                    `;
-                    // Add click event to open the modal
-                    card.addEventListener('click', () => openModal(luogo));
-                    searchResults.appendChild(card);
-                }
+                return searchIn.includes(query);
             });
-
-            if (foundCount === 0) {
+            
+            renderLuoghi(risultatiFiltrati); // Mostra filtrati
+            
+            if (risultatiFiltrati.length === 0) {
+                defaultMessage.style.display = 'block';
                 defaultMessage.innerHTML = `
-                    <i class="ph ph-x-circle text-4xl text-red-400"></i>
+                    <i class="ph ph-x-circle text-5xl text-red-400 opacity-50"></i>
                     <p class="mt-2">Nessun risultato per "<b>${query}</b>".</p>
                 `;
-                defaultMessage.style.display = 'block';
-            }
-        });
-
-        // --- Modal Logic ---
-        function openModal(luogo) {
-            modalImg.src = luogo.foto;
-            modalTitle.textContent = luogo.nome;
-            modalLocation.textContent = luogo.posizione;
-            modalNotes.textContent = luogo.note || 'Nessuna nota.'; // Fallback text
-            modal.classList.remove('hidden');
-        }
-
-        closeModal.addEventListener('click', () => {
-            modal.classList.add('hidden');
-        });
-
-        // Close modal if clicking on the background
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.add('hidden');
-            }
-        });
-
-        // --- Tab Navigation Logic ---
-        function switchTab(activeTab) {
-            if (activeTab === 'cerca') {
-                // Activate Search
-                tabCerca.classList.remove('hidden');
-                tabPremium.classList.add('hidden');
-                navCerca.classList.add('text-blue-600', 'border-t-2', 'border-blue-600');
-                navCerca.classList.remove('text-gray-500');
-                // Deactivate Premium
-                navPremium.classList.add('text-gray-500');
-                navPremium.classList.remove('text-blue-600', 'border-t-2', 'border-blue-600');
-            } else if (activeTab === 'premium') {
-                // Activate Premium
-                tabPremium.classList.remove('hidden');
-                tabCerca.classList.add('hidden');
-                navPremium.classList.add('text-blue-600', 'border-t-2', 'border-blue-600');
-                navPremium.classList.remove('text-gray-500');
-                // Deactivate Search
-                navCerca.classList.add('text-gray-500');
-                navCerca.classList.remove('text-blue-600', 'border-t-2', 'border-blue-600');
             }
         }
+        
+        searchInput.addEventListener('input', handleSearch);
 
-        navCerca.addEventListener('click', () => switchTab('cerca'));
-        navPremium.addEventListener('click', () => switchTab('premium'));
+        // --- 7. LOGICA MODALI ---
 
-        // --- !!! INIZIO AGGIUNTA PWA: REGISTRAZIONE SERVICE WORKER !!! ---
-        // Questo codice controlla se il browser supporta i service worker
-        // e, in caso affermativo, registra il nostro file service-worker.js
+        function openDetailModal(luogo) {
+            modalImg.src = luogo.foto || 'https://placehold.co/600x400/e2e8f0/64748b?text=Foto';
+            modalTitle.textContent = luogo.nome || 'Senza nome';
+            modalLocation.textContent = luogo.posizione || 'Nessuna posizione';
+            modalNotes.textContent = luogo.note || 'Nessuna nota.';
+            detailModal.classList.remove('hidden');
+        }
+
+        closeDetailModal.addEventListener('click', () => {
+            detailModal.classList.add('hidden');
+        });
+        detailModal.addEventListener('click', (e) => {
+            if (e.target === detailModal) {
+                detailModal.classList.add('hidden');
+            }
+        });
+
+        openAddModalButton.addEventListener('click', () => {
+            addModal.classList.remove('hidden');
+        });
+
+        closeAddModalButton.addEventListener('click', () => {
+            addModal.classList.add('hidden');
+            addForm.reset();
+        });
+        addModal.addEventListener('click', (e) => {
+            if (e.target === addModal) {
+                addModal.classList.add('hidden');
+                addForm.reset();
+            }
+        });
+
+        // --- 8. PWA Service Worker ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./service-worker.js')
                     .then(registration => {
-                        console.log('Service Worker registrato con successo:', registration.scope);
+                        console.log('Service Worker registrato:', registration.scope);
                     })
                     .catch(error => {
                         console.log('Registrazione Service Worker fallita:', error);
                     });
             });
         }
-        // --- !!! FINE AGGIUNTA PWA !!! ---
+        
+        // --- 9. INIZIO ---
+        // Controlla se le chiavi sono state inserite
+        if (SUPABASE_URL === https://hqpgxgxwxrkzicynedsg.supabase.co || SUPABASE_ANON_KEY === eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxcGd4Z3h3eHJremljeW5lZHNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0NjA2NDEsImV4cCI6MjA3NzAzNjY0MX0.H8U2pp4ZlqUs2Y7RRk3XhR-_nYVedvaZCaUW8Xw5JBI) {
+            loadingMessage.innerHTML = '<p class="text-red-500 font-bold">ERRORE: Le chiavi Supabase non sono state inserite nel file index.html (Passo 2 della guida).</p>';
+            console.error("ERRORE: Inserisci le tue chiavi Supabase nel file index.html");
+        } else {
+            console.log("Supabase client inizializzato.");
+            authButtons.classList.remove('hidden');
+            loadingMessage.classList.add('hidden');
+        }
 
     </script>
 
