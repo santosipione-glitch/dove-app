@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dov'è - Archivio Domestico</title>
+    <!-- Carico Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carico le icone di Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        /* Stile per il font Inter e un fallback */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6; /* Un grigio molto chiaro per lo sfondo */
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        /* Piccola animazione di fade-in per i risultati */
+        .risultato-item {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stile per la barra di navigazione fissa in basso */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            border-top: 1px solid #e5e7eb;
+            background-color: white;
+            padding-bottom: env(safe-area-inset-bottom, 0); /* Supporto per iPhone X */
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Contenitore principale con padding per la bottom-nav -->
+    <div id="app" class="pb-24">
+        
+        <!-- Schermata Cerca (Default) -->
+        <div id="tab-cerca">
+            <!-- Header -->
+            <header class="bg-white shadow-sm p-4 sticky top-0 z-10">
+                <div class="max-w-md mx-auto">
+                    <h1 class="text-2xl font-bold text-center text-blue-600">Dov'è</h1>
+                    <p class="text-center text-gray-500 text-sm">Il tuo motore di ricerca domestico.</p>
+                </div>
+            </header>
+
+            <!-- Contenuto principale -->
+            <main class="max-w-md mx-auto p-4">
+                
+                <!-- Barra di Ricerca -->
+                <div class="relative mb-6">
+                    <input type="text" id="search-input" placeholder="Cerca passaporto, batterie, natale..." class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <i class="ph ph-magnifying-glass absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+
+                <!-- Risultati della Ricerca -->
+                <div id="search-results" class="space-y-4">
+                    <!-- I risultati verranno iniettati qui dal JS -->
+                </div>
+
+                <!-- Messaggio di default o nessun risultato -->
+                <div id="default-message" class="text-center text-gray-400 mt-10">
+                    <i class="ph ph-sparkle text-4xl"></i>
+                    <p class="mt-2">Inizia a cercare per trovare i tuoi oggetti.</p>
+                </div>
+
+            </main>
+        </div>
+
+        <!-- Schermata Premium -->
+        <div id="tab-premium" class="hidden">
+            <!-- Header -->
+            <header class="bg-white shadow-sm p-4 sticky top-0 z-10">
+                <div class="max-w-md mx-auto">
+                    <h1 class="text-2xl font-bold text-center text-blue-600">Dov'è Premium</h1>
+                    <p class="text-center text-gray-500 text-sm">Sblocca funzioni potentissime.</p>
+                </div>
+            </header>
+
+            <!-- Contenuto Premium -->
+            <main class="max-w-md mx-auto p-4">
+                <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+                    <div class="p-6">
+                        <div class="text-center">
+                            <i class="ph ph-rocket-launch text-6xl text-blue-500"></i>
+                            <h2 class="text-3xl font-bold text-gray-800 mt-4">Passa a Premium</h2>
+                            <p class="text-gray-600 mt-2">Ottieni il massimo dal tuo archivio domestico per soli **1,99€ / mese**.</p>
+                        </div>
+                        
+                        <ul class="space-y-4 mt-8 text-gray-700">
+                            <li class="flex items-center">
+                                <i class="ph ph-users text-blue-500 text-xl mr-3"></i>
+                                <span>Condivisione Familiare (in arrivo)</span>
+                            </li>
+                            <li class="flex items-center">
+                                <i class="ph ph-cloud-arrow-up text-blue-500 text-xl mr-3"></i>
+                                <span>Backup e Ripristino nel Cloud</span>
+                            </li>
+                            <li class="flex items-center">
+                                <i class="ph ph-sparkle text-blue-500 text-xl mr-3"></i>
+                                <span>Tagging Automatico con AI (in arrivo)</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Funzione Killer: Assicurazione -->
+                    <div class="bg-blue-50 p-6 border-t border-blue-200">
+                        <div class="flex items-center">
+                            <i class="ph ph-house-line text-4xl text-blue-600 mr-4"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold text-blue-800">Servizio Assicurativo</h3>
+                                <p class="text-blue-700 text-sm">In caso di furto o incendio, esporta l'inventario completo con foto come PDF ufficiale per la tua assicurazione.</p>
+                            </div>
+                        </div>
+                        <button class="w-full mt-4 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition-colors">
+                            Diventa Premium
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+    </div>
+
+    <!-- Barra di Navigazione Inferiore -->
+    <nav class="bottom-nav flex justify-around max-w-md mx-auto">
+        <button id="nav-cerca" class="flex-1 text-center py-3 text-blue-600 border-t-2 border-blue-600">
+            <i class="ph ph-magnifying-glass text-2xl"></i>
+            <span class="text-xs block">Cerca</span>
+        </button>
+        <button id="nav-premium" class="flex-1 text-center py-3 text-gray-500">
+            <i class="ph ph-rocket-launch text-2xl"></i>
+            <span class="text-xs block">Premium</span>
+        </button>
+    </nav>
+
+
+    <!-- Modale (popup) per i dettagli dell'oggetto -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-20 hidden">
+        <div class="bg-white rounded-lg shadow-2xl max-w-sm w-full">
+            <img id="modal-img" src="" alt="Foto del luogo" class="w-full h-48 object-cover rounded-t-lg">
+            <div class="p-5">
+                <h2 id="modal-title" class="text-2xl font-bold mb-2"></h2>
+                <p class="text-gray-600 mb-4">Si trova in:</p>
+                <div class="bg-gray-100 p-3 rounded-lg mb-4">
+                    <strong id="modal-location" class="text-gray-800"></strong>
+                </div>
+                <p class="text-gray-600 mb-2">Note aggiuntive:</p>
+                <div class="bg-gray-100 p-3 rounded-lg min-h-[50px]">
+                    <em id="modal-notes" class="text-gray-800"></em>
+                </div>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-b-lg">
+                <button id="close-modal" class="w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
+                    Chiudi
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Sample Database ---
+        // This is our fake "database". It holds all the locations and items.
+        const luoghi = [
+            {
+                id: 1,
+                foto: "https://placehold.co/600x400/e2e8f0/64748b?text=Foto+Cassetto+Studio",
+                nome: "Cassetto alto scrivania",
+                posizione: "Studio > Scrivania",
+                tags: ["passaporto", "documenti", "chiavette usb", "penne"],
+                note: "Ci sono anche le chiavi di scorta della cantina."
+            },
+            {
+                id: 2,
+                foto: "https://placehold.co/600x400/d1d5db/4b5563?text=Foto+Scatola+Batterie",
+                nome: "Scatola batterie",
+                posizione: "Ripostiglio > Scaffale Sinistro",
+                tags: ["batterie", "pile", "aa", "aaa", "caricabatterie"],
+                note: "Controllare scorte batterie AAA."
+            },
+            {
+                id: 3,
+                foto: "https://placehold.co/600x400/9ca3af/f3f4f6?text=Foto+Scatolone+Natale",
+                nome: "Scatolone decorazioni",
+                posizione: "Cantina > Scaffale Destro",
+                tags: ["natale", "lucine", "palline", "decorazioni"],
+                note: "Le lucine blu sono rotte, da ricomprare."
+            },
+            {
+                id: 4,
+                foto: "https://placehold.co/600x400/cbd5e1/334155?text=Foto+Armadietto+Cavi",
+                nome: "Armadietto TV",
+                posizione: "Salotto > Mobile TV",
+                tags: ["cavi", "hdmi", "telecomandi", "prolunga"],
+                note: "C'è il cavo HDMI da 5 metri."
+            }
+        ];
+
+        // --- DOM Elements ---
+        // Get all the page elements we need to interact with
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        const defaultMessage = document.getElementById('default-message');
+        
+        const modal = document.getElementById('modal');
+        const closeModal = document.getElementById('close-modal');
+        const modalImg = document.getElementById('modal-img');
+        const modalTitle = document.getElementById('modal-title');
+        const modalLocation = document.getElementById('modal-location');
+        const modalNotes = document.getElementById('modal-notes');
+
+        const navCerca = document.getElementById('nav-cerca');
+        const navPremium = document.getElementById('nav-premium');
+        const tabCerca = document.getElementById('tab-cerca');
+        const tabPremium = document.getElementById('tab-premium');
+
+        // --- Search Logic ---
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            
+            // Clear previous results
+            searchResults.innerHTML = '';
+            
+            if (query.length < 2) {
+                defaultMessage.style.display = 'block'; // Show default message
+                return; // Don't search if query is too short
+            }
+
+            defaultMessage.style.display = 'none'; // Hide default message
+            
+            let foundCount = 0;
+            
+            luoghi.forEach(luogo => {
+                // Search in tags, name, and notes
+                const searchIn = [luogo.nome, ...luogo.tags, luogo.note].join(' ').toLowerCase();
+                
+                if (searchIn.includes(query)) {
+                    foundCount++;
+                    
+                    // Check if we need to show the affiliate offer
+                    const isRotto = luogo.note.toLowerCase().includes('rotto');
+                    const isLucine = luogo.tags.includes('lucine');
+                    const offertaHTML = (isRotto && isLucine) ? `
+                        <div class="mt-3 p-3 bg-blue-100 border border-blue-200 rounded-lg">
+                            <p class="text-sm text-blue-800"><i class="ph ph-lightbulb"></i> Abbiamo notato che le lucine sono rotte!</p>
+                            <a href="#" class="text-sm font-semibold text-blue-600 hover:underline">Trova offerte per nuove lucine <i class="ph ph-arrow-right"></i></a>
+                        </div>
+                    ` : '';
+
+                    // Create the result card
+                    const card = document.createElement('div');
+                    card.className = 'risultato-item bg-white p-4 rounded-lg shadow transition-transform transform hover:scale-[1.02] cursor-pointer';
+                    card.innerHTML = `
+                        <div class="flex items-center">
+                            <img src="${luogo.foto}" alt="${luogo.nome}" class="w-16 h-16 rounded-lg object-cover mr-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">${luogo.nome}</h3>
+                                <p class="text-sm text-gray-500">${luogo.posizione}</p>
+                            </div>
+                        </div>
+                        ${offertaHTML}
+                    `;
+                    // Add click event to open the modal
+                    card.addEventListener('click', () => openModal(luogo));
+                    searchResults.appendChild(card);
+                }
+            });
+
+            if (foundCount === 0) {
+                defaultMessage.innerHTML = `
+                    <i class="ph ph-x-circle text-4xl text-red-400"></i>
+                    <p class="mt-2">Nessun risultato per "<b>${query}</b>".</p>
+                `;
+                defaultMessage.style.display = 'block';
+            }
+        });
+
+        // --- Modal Logic ---
+        function openModal(luogo) {
+            modalImg.src = luogo.foto;
+            modalTitle.textContent = luogo.nome;
+            modalLocation.textContent = luogo.posizione;
+            modalNotes.textContent = luogo.note || 'Nessuna nota.'; // Fallback text
+            modal.classList.remove('hidden');
+        }
+
+        closeModal.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+
+        // Close modal if clicking on the background
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+
+        // --- Tab Navigation Logic ---
+        function switchTab(activeTab) {
+            if (activeTab === 'cerca') {
+                // Activate Search
+                tabCerca.classList.remove('hidden');
+                tabPremium.classList.add('hidden');
+                navCerca.classList.add('text-blue-600', 'border-t-2', 'border-blue-600');
+                navCerca.classList.remove('text-gray-500');
+                // Deactivate Premium
+                navPremium.classList.add('text-gray-500');
+                navPremium.classList.remove('text-blue-600', 'border-t-2', 'border-blue-600');
+            } else if (activeTab === 'premium') {
+                // Activate Premium
+                tabPremium.classList.remove('hidden');
+                tabCerca.classList.add('hidden');
+                navPremium.classList.add('text-blue-600', 'border-t-2', 'border-blue-600');
+                navPremium.classList.remove('text-gray-500');
+                // Deactivate Search
+                navCerca.classList.add('text-gray-500');
+                navCerca.classList.remove('text-blue-600', 'border-t-2', 'border-blue-600');
+            }
+        }
+
+        navCerca.addEventListener('click', () => switchTab('cerca'));
+        navPremium.addEventListener('click', () => switchTab('premium'));
+
+    </script>
+
+</body>
+</html>
